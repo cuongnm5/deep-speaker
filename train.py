@@ -12,9 +12,9 @@ from keras.models import Model
 
 import config as c
 import select_batch
-from pre_process import data_catalog, preprocess_and_save
+from pre_process import data_catalog
 from models import convolutional_model
-from random_batch import stochastic_mini_batch
+from random_batch import random_batch
 from triplet_loss import deep_speaker_loss
 from utils import get_last_checkpoint_if_any, create_dir_and_delete_content
 
@@ -41,35 +41,18 @@ def create_dict(files,labels,classes):
     unique_speakers=list(train_dict.keys())
     return train_dict, unique_speakers
 
-def main(libri_dir=c.DATASET_DIR):
+def main():
 
     PRE_TRAIN = c.PRE_TRAIN
-    print('Looking for fbank features [.npy] files in {}.'.format(libri_dir))
-    libri = data_catalog(libri_dir)
+    print('Looking for fbank features [.npy] files in {}.'.format(c.DATASET_DIR))
+    libri = data_catalog(c.DATASET_DIR)
 
-    if len(libri) == 0:
-        preprocess_and_save(c.WAV_DIR, c.DATASET_DIR)
-        libri = data_catalog(libri_dir)
-
-    unique_speakers = libri['speaker_id'].unique()
-    speaker_utterance_dict, unique_speakers = create_dict(libri['filename'].values,libri['speaker_id'].values,unique_speakers)
+    unique_speakers = libri['speaker'].unique()
+    speaker_utterance_dict, unique_speakers = create_dict(libri['filename'].values,libri['speaker'].values,unique_speakers)
     select_batch.create_data_producer(unique_speakers, speaker_utterance_dict)
 
-    batch = stochastic_mini_batch(libri, batch_size=c.BATCH_SIZE, unique_speakers=unique_speakers)
-    batch_size = c.BATCH_SIZE * c.TRIPLET_PER_BATCH
-    x, y = batch.to_inputs()
-    b = x[0]
-    num_frames = b.shape[0]
-    train_batch_size = batch_size
-    #batch_shape = [batch_size * num_frames] + list(b.shape[1:])  # A triplet has 3 parts.
-    input_shape = (num_frames, b.shape[1], b.shape[2])
-
-    print('num_frames = {}'.format(num_frames))
-    print('batch size: {}'.format(batch_size))
-    print('input shape: {}'.format(input_shape))
-    print('x.shape : {}'.format(x.shape))
     orig_time = time()
-    model = convolutional_model(input_shape=input_shape, batch_size=batch_size, num_frames=num_frames)
+    model = convolutional_model(input_shape=c.INPUT_SHAPE, batch_size=c.BATCH_SIZE, num_frames=c.NUM_FRAMES)
     print(model.summary())
     grad_steps = 0
     if PRE_TRAIN:
@@ -90,7 +73,6 @@ def main(libri_dir=c.DATASET_DIR):
             print('Found checkpoint [{}]. Resume from here...'.format(last_checkpoint))
             model.load_weights(last_checkpoint)
             grad_steps = int(last_checkpoint.split('_')[-2])
-            #grad_steps = 0
             print('[DONE]')
 
 
@@ -102,8 +84,9 @@ def main(libri_dir=c.DATASET_DIR):
     last_loss = 10
     while True:
         orig_time = time()
-        x, _ = select_batch.best_batch(model, batch_size=c.BATCH_SIZE)
-        y = np.random.uniform(size=(x.shape[0], 1))
+        #x, _ = select_batch.best_batch(model, batch_size=c.BATCH_SIZE)
+        #y = np.random.uniform(size=(x.shape[0], 1))
+        x, y = random_batch(libri, c.BATCH_SIZE)
         print('== Presenting step #{0}'.format(grad_steps))
         orig_time = time()
         loss = model.train_on_batch(x, y)
