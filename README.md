@@ -24,7 +24,6 @@ This part i will use vietnamese, if i have time in the future, i will translate 
   ```def read_audio(filename, sample_rate=SAMPLE_RATE)``` : Hàm đọc file raw audio, dùng thư viện librosa để load
   âm thanh với tần số lấy mẫu là SAMPLE_RATE = 16000. Sample_rate là gì? Vậy tại sao không lấy mẫu tại 44000? 
   Tham khảo [tại đây.](https://librosa.github.io/blog/2019/07/17/resample-on-load/) 
-  Ngoài ra, mình chỉ lấy 3s/audio, đây là 1 điểm hạn chế mà mình sẽ sửa chữa sớm, vì điều này làm mất data với những file audio lớn.
   
   ```def normalize_frames(m,epsilon=1e-12)``` : Hàm chuẩn hóa đầu vào mạng deep learning, nó cho phép sử dụng tốt hơn 
   learning rate, khởi tạo hiệu quả hơn. Chi tiết tại đây: [Batch normalize](https://arxiv.org/pdf/1502.03167.pdf)
@@ -47,6 +46,22 @@ Model được implement lại giống y hệt trong paper, sử dụng 4 res_bl
 
 #### ```random_batch.py```
 
-#### Mục đích: Tạo batch random để làm input cho pretrain model với loss softmax.
+#### Mục đích: Tạo batch random để làm input cho việc train những batch đầu.
 
 #### Chi tiết:
+
+  ```def clipped_audio(audio)``` : Hàm chuẩn hóa audio, cắt độ dài audio về đúng num_frames = 160.
+  
+  ```def random_batch``` : Model train triplet loss cần input như sau: 1 file anchor, 1 file positive, 1 file negative. Hàm này sẽ lấy ra input theo kiểu chọn ngẫu nhiên từ thư mục chứa data, cách thức như sau:
+  
+  Lấy ra ```libri``` lưu lại tên speaker và filename trong thư mục chứa data_train, chọn random 1 speaker làm anchor, lấy 2 file .npy thuộc anchor này. Chọn random 1 speaker khác làm negative_speaker, lấy 1 file .npy thuộc speaker này. 
+  
+#### ```select_batch.py```
+
+#### Mục đích: Tạo input cho việc train triplet loss được hiệu quả và hội tụ nhanh hơn. Các batch sẽ được chọn theo phương pháp sau: Chọn ngẫu nhiên 1/2 speaker, tính cosine_similarity của tất cả file thuộc speaker được chọn với tất cả 
+
+#### Chi tiết: 
+
+  ``` def matrix_cosine_similarity(x1, x2)```: So sánh khoảng cách cosine giữa 2 embedding. Giá trị trả về nằm trong khoảng [-1;1]. Sims càng cao nghĩa là 2 embedding đó thuộc về cùng 1 speaker.
+  
+  
