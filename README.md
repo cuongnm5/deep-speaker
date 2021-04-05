@@ -1,7 +1,7 @@
 # deep-speaker
-## Speech identification with deep speaker 
+## Speaker identification with Deep Speaker 
 
-Dataset: not public
+Dataset: Private
 
 Reference Paper: https://arxiv.org/pdf/1705.02304.pdf
 
